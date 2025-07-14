@@ -188,7 +188,7 @@ async function startWebDashboard(bot) {
         });
         
         // Start server
-        const port =  3000;
+        const port =  process.env.PORT || 3000;
         app.listen(port, '0.0.0.0', () => {
             logger.info(`🌐 Web dashboard started on http://0.0.0.0:${port}`);
         });
