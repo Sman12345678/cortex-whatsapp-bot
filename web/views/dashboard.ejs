@@ -1,0 +1,449 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= data.botName %> - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #25d366;
+            --secondary-color: #128c7e;
+            --dark-bg: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-light: #ffffff;
+            --text-muted: #b0b0b0;
+        }
+        
+        body {
+            background-color: var(--dark-bg);
+            color: var(--text-light);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            box-shadow: 0 2px 20px rgba(37, 211, 102, 0.3);
+        }
+        
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid #404040;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+        }
+        
+        .stat-card {
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-weight: 500;
+        }
+        
+        .status-online {
+            background-color: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+            border: 1px solid #28a745;
+        }
+        
+        .status-offline {
+            background-color: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+            border: 1px solid #dc3545;
+        }
+        
+        .qr-container {
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .qr-code {
+            max-width: 256px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .refresh-btn {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            border-radius: 50px;
+            padding: 0.5rem 1.5rem;
+            color: white;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .footer {
+            margin-top: 3rem;
+            padding: 2rem 0;
+            border-top: 1px solid #404040;
+            text-align: center;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-dark">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">
+                <i class="bi bi-robot"></i> <%= data.botName %> Dashboard
+            </span>
+            <div class="d-flex align-items-center">
+                <span class="status-badge <%= data.connectionStatus.connected ? 'status-online' : 'status-offline' %>">
+                    <i class="bi bi-circle-fill"></i>
+                    <%= data.connectionStatus.connected ? 'Connected' : 'Disconnected' %>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- QR Code Section -->
+        <% if (data.qrCode && !data.connectionStatus.connected) { %>
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body qr-container">
+                        <h5 class="card-title gradient-text">
+                            <i class="bi bi-qr-code"></i> WhatsApp QR Code
+                        </h5>
+                        <p class="text-muted mb-3">Scan this QR code with WhatsApp to connect the bot</p>
+                        <img src="<%= data.qrCode.dataURL %>" alt="WhatsApp QR Code" class="qr-code img-fluid">
+                        <div class="mt-3">
+                            <button class="btn refresh-btn" onclick="refreshQR()">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh QR
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <% } %>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card stat-card">
+                    <div class="stat-number text-primary">
+                        <i class="bi bi-people-fill"></i>
+                        <div><%= data.userStats.total || 0 %></div>
+                    </div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card stat-card">
+                    <div class="stat-number text-success">
+                        <i class="bi bi-person-check-fill"></i>
+                        <div><%= data.userStats.active || 0 %></div>
+                    </div>
+                    <div class="stat-label">Active Users (7d)</div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card stat-card">
+                    <div class="stat-number text-info">
+                        <i class="bi bi-controller"></i>
+                        <div><%= data.gameStats.activeGames || 0 %></div>
+                    </div>
+                    <div class="stat-label">Active Games</div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card stat-card">
+                    <div class="stat-number text-warning">
+                        <i class="bi bi-crown-fill"></i>
+                        <div><%= data.userStats.admins || 0 %></div>
+                    </div>
+                    <div class="stat-label">Admin Users</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Status -->
+        <div class="row mb-4">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-gear-fill"></i> System Status
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <span>WhatsApp Connection:</span>
+                                    <span class="status-badge <%= data.connectionStatus.connected ? 'status-online' : 'status-offline' %>">
+                                        <i class="bi bi-circle-fill"></i>
+                                        <%= data.connectionStatus.connected ? 'Connected' : 'Disconnected' %>
+                                    </span>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <span>AI Service:</span>
+                                    <span class="status-badge <%= data.aiAvailable ? 'status-online' : 'status-offline' %>">
+                                        <i class="bi bi-circle-fill"></i>
+                                        <%= data.aiAvailable ? 'Available' : 'Unavailable' %>
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <span>Uptime:</span>
+                                    <span class="badge bg-info">
+                                        <span id="uptime"><%= Math.floor(data.connectionStatus.uptime / 60) %> minutes</span>
+                                    </span>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <span>Retry Count:</span>
+                                    <span class="badge bg-secondary">
+                                        <%= data.connectionStatus.retryCount %>/5
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-arrow-clockwise"></i> Quick Actions
+                        </h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <button class="btn refresh-btn w-100 mb-2" onclick="refreshStats()">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh Stats
+                        </button>
+                        
+                        <% if (!data.connectionStatus.connected) { %>
+                        <button class="btn refresh-btn w-100" onclick="refreshQR()">
+                            <i class="bi bi-qr-code"></i> Refresh QR Code
+                        </button>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Message Activity Chart -->
+        <div class="row mb-4">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-chat-dots"></i> Message Activity
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="messageChart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-pie-chart"></i> Message Types
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="typeChart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-people-fill"></i> User Statistics
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <div class="stat-number text-primary h4"><%= data.userStats.total || 0 %></div>
+                                <div class="stat-label">Total Users</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-number text-success h4"><%= data.userStats.active || 0 %></div>
+                                <div class="stat-label">Active (7d)</div>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <div class="stat-number text-warning h4"><%= data.userStats.admins || 0 %></div>
+                                <div class="stat-label">Admins</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-number text-danger h4"><%= data.userStats.banned || 0 %></div>
+                                <div class="stat-label">Banned</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-controller"></i> Game Activity
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center">
+                            <div class="stat-number text-info h2"><%= data.gameStats.activeGames || 0 %></div>
+                            <div class="stat-label mb-3">Active Games</div>
+                            
+                            <% if (data.gameStats.gameTypes && data.gameStats.gameTypes.length > 0) { %>
+                            <p class="text-muted">Game Types:</p>
+                            <% data.gameStats.gameTypes.forEach(function(type) { %>
+                                <span class="badge bg-success me-1"><%= type.replace(/_/g, ' ') %></span>
+                            <% }); %>
+                            <% } else { %>
+                            <p class="text-muted">No active games</p>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <div class="container">
+            <p>&copy; 2025 <%= data.botName %>. Built with Node.js, Baileys & Google Gemini AI.</p>
+            <p class="small">Last updated: <span id="lastUpdated"></span></p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/dashboard.js"></script>
+    <script>
+        // Update last updated time
+        document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+        
+        // Initialize dashboard
+        const dashboardData = <%- JSON.stringify(data) %>;
+        if (typeof initializeDashboard === 'function') {
+            initializeDashboard(dashboardData);
+        }
+        
+        // Auto-refresh functionality
+        let autoRefresh = true;
+        
+        async function refreshStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                
+                // Update stats in the UI
+                location.reload(); // Simple refresh for now
+                
+            } catch (error) {
+                console.error('Error refreshing stats:', error);
+            }
+        }
+        
+        async function refreshQR() {
+            try {
+                const response = await fetch('/api/qr');
+                const data = await response.json();
+                
+                if (data.dataURL) {
+                    const qrImg = document.querySelector('.qr-code');
+                    if (qrImg) {
+                        qrImg.src = data.dataURL;
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error refreshing QR code:', error);
+            }
+        }
+        
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            if (autoRefresh) {
+                refreshStats();
+            }
+        }, 30000);
+        
+        // Add pulse animation to online status
+        document.addEventListener('DOMContentLoaded', function() {
+            const onlineElements = document.querySelectorAll('.status-online');
+            onlineElements.forEach(el => {
+                el.classList.add('pulse');
+            });
+        });
+    </script>
+</body>
+</html>

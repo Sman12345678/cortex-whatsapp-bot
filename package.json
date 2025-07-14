@@ -1,0 +1,34 @@
+{
+  "name": "workspace",
+  "version": "1.0.0",
+  "description": "A powerful and comprehensive WhatsApp bot built with Flask, PyWa, and Google Gemini AI featuring extensive file processing, admin controls, and engaging chat capabilities.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@whiskeysockets/baileys": "^6.7.18",
+    "compression": "^1.8.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.0",
+    "ejs": "^3.1.10",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.1",
+    "file-type": "^21.0.0",
+    "helmet": "^8.1.0",
+    "moment": "^2.30.1",
+    "multer": "^2.0.1",
+    "pdf-parse": "^1.1.1",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0",
+    "sequelize": "^6.37.7",
+    "socket.io": "^4.8.1",
+    "sqlite3": "^5.1.7",
+    "winston": "^3.17.0",
+    "xlsx": "^0.18.5"
+  }
+}
