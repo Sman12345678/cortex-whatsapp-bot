@@ -26,7 +26,7 @@ function extractUserId(jid) {
 }
 
 /**
- * Check if user is admin
+ * Check if user is bot admin (only config.BOT_ADMIN_PHONE is allowed, not group admins)
  */
 function isAdmin(phoneNumber) {
     const adminPhone = config.BOT_ADMIN_PHONE;
