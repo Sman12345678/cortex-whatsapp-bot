@@ -9,6 +9,7 @@ class GameHandler {
         this.gameTimeouts = new Map(); // Store game timeouts
     }
 
+    // Start Rock Paper Scissors game, prompt user to reply with text
     async startRockPaperScissors(socket, message, user) {
         try {
             const gameId = generateGameSessionId();
@@ -27,43 +28,31 @@ class GameHandler {
 
             this.activeGames.set(gameId, game);
 
-            const buttons = [
-                { id: 'rps_rock', text: '🪨 Rock' },
-                { id: 'rps_paper', text: '📄 Paper' },
-                { id: 'rps_scissors', text: '✂️ Scissors' }
-            ];
-
-            await socket.sendMessage(message.key.remoteJid, {
-                text: `🎮 *Rock Paper Scissors* - Round ${game.round}/${game.maxRounds}\n\n🤖 Bot: ${game.botScore} | 👤 You: ${game.userScore}\n\nChoose your move!`,
-                buttons: buttons.map((btn, index) => ({
-                    buttonId: btn.id,
-                    buttonText: { displayText: btn.text },
-                    type: 1
-                })),
-                headerType: 1,
-                footer: 'Choose wisely!'
-            });
+            await socket.sendMessage(message.key.remoteJid, 
+                `🎮 *Rock Paper Scissors* - Round ${game.round}/${game.maxRounds}\n\n🤖 Bot: ${game.botScore} | 👤 You: ${game.userScore}\n\nType 'rock', 'paper', or 'scissors' to make your move.`
+            );
 
             // Set timeout for the game
             this.setGameTimeout(gameId, 30000);
 
         } catch (error) {
             logger.error('❌ Error starting Rock Paper Scissors:', error);
-            await socket.sendMessage(message.key.remoteJid, {
-                text: '❌ Error starting game. Please try again.'
-            });
+            await socket.sendMessage(message.key.remoteJid, '❌ Error starting game. Please try again.');
         }
     }
 
-    async handleRockPaperScissors(socket, message, user, buttonId) {
+    // Handle user's move (sent as text: 'rock', 'paper', 'scissors')
+    async handleRockPaperScissorsMove(socket, message, user, userMoveRaw) {
         try {
-            const userMove = buttonId.split('_')[1]; // Extract move from button ID
+            const userMove = userMoveRaw.trim().toLowerCase();
+            if (!['rock', 'paper', 'scissors'].includes(userMove)) {
+                await socket.sendMessage(message.key.remoteJid, "❌ Invalid move. Type 'rock', 'paper' or 'scissors'.");
+                return;
+            }
             const gameId = this.findActiveGame(user.id, 'rock_paper_scissors');
             
             if (!gameId) {
-                await socket.sendMessage(message.key.remoteJid, {
-                    text: '❌ No active Rock Paper Scissors game found. Use /rps to start a new game.'
-                });
+                await socket.sendMessage(message.key.remoteJid, '❌ No active Rock Paper Scissors game found. Use /rps to start a new game.');
                 return;
             }
 
@@ -136,47 +125,21 @@ class GameHandler {
                     });
                 }
 
-                await socket.sendMessage(message.key.remoteJid, {
-                    text: responseText,
-                    buttons: [{
-                        buttonId: 'rps_play_again',
-                        buttonText: { displayText: '🔄 Play Again' },
-                        type: 1
-                    }],
-                    headerType: 1,
-                    footer: 'Thanks for playing!'
-                });
+                responseText += `\n\nType '/rps' to play again.`;
+                await socket.sendMessage(message.key.remoteJid, responseText);
 
                 this.endGame(gameId);
             } else {
                 // Continue to next round
-                responseText += `*Round ${game.round}/${game.maxRounds}* - Choose your next move!`;
-
-                const buttons = [
-                    { id: 'rps_rock', text: '🪨 Rock' },
-                    { id: 'rps_paper', text: '📄 Paper' },
-                    { id: 'rps_scissors', text: '✂️ Scissors' }
-                ];
-
-                await socket.sendMessage(message.key.remoteJid, {
-                    text: responseText,
-                    buttons: buttons.map((btn, index) => ({
-                        buttonId: btn.id,
-                        buttonText: { displayText: btn.text },
-                        type: 1
-                    })),
-                    headerType: 1,
-                    footer: 'Round continues!'
-                });
+                responseText += `*Round ${game.round}/${game.maxRounds}* - Type 'rock', 'paper', or 'scissors' for your next move.`;
+                await socket.sendMessage(message.key.remoteJid, responseText);
 
                 this.setGameTimeout(gameId, 30000);
             }
 
         } catch (error) {
             logger.error('❌ Error handling Rock Paper Scissors move:', error);
-            await socket.sendMessage(message.key.remoteJid, {
-                text: '❌ Error processing your move. Please try again.'
-            });
+            await socket.sendMessage(message.key.remoteJid, '❌ Error processing your move. Please try again.');
         }
     }
 
@@ -184,13 +147,10 @@ class GameHandler {
         try {
             const gameId = generateGameSessionId();
             
-            // Generate first question
             const question = await aiService.generateQuizQuestion(topic);
             
             if (!question) {
-                await socket.sendMessage(message.key.remoteJid, {
-                    text: '❌ Failed to generate quiz question. Please try again later.'
-                });
+                await socket.sendMessage(message.key.remoteJid, '❌ Failed to generate quiz question. Please try again later.');
                 return;
             }
 
@@ -210,41 +170,30 @@ class GameHandler {
 
             this.activeGames.set(gameId, game);
 
-            const buttons = question.options.map((option, index) => ({
-                id: `quiz_${String.fromCharCode(97 + index)}`, // quiz_a, quiz_b, etc.
-                text: option
-            }));
-
-            await socket.sendMessage(message.key.remoteJid, {
-                text: `🧠 *Quiz Time!* (${topic})\n\n*Question ${game.currentQuestion}/${game.maxQuestions}:*\n${question.question}\n\n📊 Score: ${game.score}`,
-                buttons: buttons.map((btn, index) => ({
-                    buttonId: btn.id,
-                    buttonText: { displayText: btn.text },
-                    type: 1
-                })),
-                headerType: 1,
-                footer: 'Choose your answer!'
-            });
+            await socket.sendMessage(
+                message.key.remoteJid, 
+                `🧠 *Quiz Time!* (${topic})\n\n*Question ${game.currentQuestion}/${game.maxQuestions}:*\n${question.question}\n\nOptions:\nA) ${question.options[0]}\nB) ${question.options[1]}\nC) ${question.options[2]}\nD) ${question.options[3]}\n\nType 'A', 'B', 'C', or 'D' to answer. 📊 Score: ${game.score}`
+            );
 
             this.setGameTimeout(gameId, 60000);
 
         } catch (error) {
             logger.error('❌ Error starting quiz:', error);
-            await socket.sendMessage(message.key.remoteJid, {
-                text: '❌ Error starting quiz. Please try again.'
-            });
+            await socket.sendMessage(message.key.remoteJid, '❌ Error starting quiz. Please try again.');
         }
     }
 
-    async handleQuizAnswer(socket, message, user, buttonId) {
+    async handleQuizAnswer(socket, message, user, answerRaw) {
         try {
-            const answer = buttonId.split('_')[1].toUpperCase(); // Extract A, B, C, D
+            const answer = answerRaw.trim().toUpperCase();
+            if (!['A', 'B', 'C', 'D'].includes(answer)) {
+                await socket.sendMessage(message.key.remoteJid, "❌ Invalid answer. Please reply with 'A', 'B', 'C', or 'D'.");
+                return;
+            }
             const gameId = this.findActiveGame(user.id, 'quiz');
             
             if (!gameId) {
-                await socket.sendMessage(message.key.remoteJid, {
-                    text: '❌ No active quiz found. Use /quiz to start a new quiz.'
-                });
+                await socket.sendMessage(message.key.remoteJid, '❌ No active quiz found. Use /quiz to start a new quiz.');
                 return;
             }
 
@@ -261,7 +210,7 @@ class GameHandler {
                 responseText = `❌ *Wrong!*\n\n`;
             }
 
-            responseText += `*Correct answer:* ${question.correct}) ${question.options.find(opt => opt.startsWith(question.correct + ')')).substring(3)}\n\n`;
+            responseText += `*Correct answer:* ${question.correct}) ${question.options["ABCD".indexOf(question.correct)]}\n\n`;
             responseText += `💡 *Explanation:* ${question.explanation}\n\n`;
             responseText += `📊 *Your Score:* ${game.score} points`;
 
@@ -269,8 +218,7 @@ class GameHandler {
 
             if (game.currentQuestion > game.maxQuestions) {
                 // Quiz finished
-                responseText += `\n\n🏁 *Quiz Complete!*\n\n`;
-                responseText += `🎯 *Final Score:* ${game.score}/${game.maxQuestions * 10} points\n`;
+                responseText += `\n\n🏁 *Quiz Complete!*\n\n🎯 *Final Score:* ${game.score}/${game.maxQuestions * 10} points\n`;
                 
                 const percentage = (game.score / (game.maxQuestions * 10)) * 100;
                 if (percentage >= 80) {
@@ -289,37 +237,18 @@ class GameHandler {
                     won: percentage >= 60 ? 1 : 0
                 });
 
-                await socket.sendMessage(message.key.remoteJid, {
-                    text: responseText,
-                    buttons: [{
-                        buttonId: 'quiz_next',
-                        buttonText: { displayText: '🔄 New Quiz' },
-                        type: 1
-                    }],
-                    headerType: 1,
-                    footer: 'Thanks for playing!'
-                });
+                responseText += `\n\nType '/quiz' for a new quiz.`;
+                await socket.sendMessage(message.key.remoteJid, responseText);
 
                 this.endGame(gameId);
             } else {
                 // Continue to next question
-                await socket.sendMessage(message.key.remoteJid, {
-                    text: responseText,
-                    buttons: [{
-                        buttonId: 'quiz_next',
-                        buttonText: { displayText: '➡️ Next Question' },
-                        type: 1
-                    }],
-                    headerType: 1,
-                    footer: 'Ready for the next question?'
-                });
+                await this.nextQuizQuestion(socket, message, user);
             }
 
         } catch (error) {
             logger.error('❌ Error handling quiz answer:', error);
-            await socket.sendMessage(message.key.remoteJid, {
-                text: '❌ Error processing your answer. Please try again.'
-            });
+            await socket.sendMessage(message.key.remoteJid, '❌ Error processing your answer. Please try again.');
         }
     }
 
@@ -328,7 +257,6 @@ class GameHandler {
             const gameId = this.findActiveGame(user.id, 'quiz');
             
             if (!gameId) {
-                // Start new quiz
                 await this.startQuiz(socket, message, user);
                 return;
             }
@@ -336,73 +264,46 @@ class GameHandler {
             const game = this.activeGames.get(gameId);
             
             if (game.currentQuestion > game.maxQuestions) {
-                // Start new quiz
                 this.endGame(gameId);
                 await this.startQuiz(socket, message, user, game.topic);
                 return;
             }
 
-            // Generate next question
             const question = await aiService.generateQuizQuestion(game.topic);
             
             if (!question) {
-                await socket.sendMessage(message.key.remoteJid, {
-                    text: '❌ Failed to generate next question. Please try /quiz to start a new quiz.'
-                });
+                await socket.sendMessage(message.key.remoteJid, '❌ Failed to generate next question. Please try /quiz to start a new quiz.');
                 this.endGame(gameId);
                 return;
             }
 
             game.currentQuestionData = question;
 
-            const buttons = question.options.map((option, index) => ({
-                id: `quiz_${String.fromCharCode(97 + index)}`,
-                text: option
-            }));
-
-            await socket.sendMessage(message.key.remoteJid, {
-                text: `🧠 *Quiz Time!* (${game.topic})\n\n*Question ${game.currentQuestion}/${game.maxQuestions}:*\n${question.question}\n\n📊 Score: ${game.score}`,
-                buttons: buttons.map((btn, index) => ({
-                    buttonId: btn.id,
-                    buttonText: { displayText: btn.text },
-                    type: 1
-                })),
-                headerType: 1,
-                footer: 'Choose your answer!'
-            });
+            await socket.sendMessage(
+                message.key.remoteJid, 
+                `🧠 *Quiz Time!* (${game.topic})\n\n*Question ${game.currentQuestion}/${game.maxQuestions}:*\n${question.question}\n\nOptions:\nA) ${question.options[0]}\nB) ${question.options[1]}\nC) ${question.options[2]}\nD) ${question.options[3]}\n\nType 'A', 'B', 'C', or 'D' to answer. 📊 Score: ${game.score}`
+            );
 
             this.setGameTimeout(gameId, 60000);
 
         } catch (error) {
             logger.error('❌ Error getting next quiz question:', error);
-            await socket.sendMessage(message.key.remoteJid, {
-                text: '❌ Error loading next question. Please try again.'
-            });
+            await socket.sendMessage(message.key.remoteJid, '❌ Error loading next question. Please try again.');
         }
     }
 
-    async handleGameButton(socket, message, user, buttonId) {
-        // Handle other game-specific buttons
-        logger.info(`🎮 Game button pressed: ${buttonId}`);
-        
-        if (buttonId.startsWith('game_end_')) {
-            const gameId = buttonId.replace('game_end_', '');
+    // Remove all button handling, use text for ending games
+    async handleGameEnd(socket, message, user) {
+        const gameId = this.findActiveGame(user.id);
+        if (gameId) {
             this.endGame(gameId);
-            await socket.sendMessage(message.key.remoteJid, {
-                text: '🏁 Game ended. Thanks for playing!'
-            });
+            await socket.sendMessage(message.key.remoteJid, '🏁 Game ended. Thanks for playing!');
         }
     }
 
     determineRPSWinner(userMove, botMove) {
         if (userMove === botMove) return 'draw';
-        
-        const winConditions = {
-            rock: 'scissors',
-            paper: 'rock',
-            scissors: 'paper'
-        };
-        
+        const winConditions = { rock: 'scissors', paper: 'rock', scissors: 'paper' };
         return winConditions[userMove] === botMove ? 'win' : 'lose';
     }
 
@@ -414,7 +315,7 @@ class GameHandler {
 
     findActiveGame(userId, gameType) {
         for (const [gameId, game] of this.activeGames) {
-            if (game.userId === userId && game.type === gameType && game.status !== 'completed') {
+            if (game.userId === userId && (!gameType || game.type === gameType) && game.status !== 'completed') {
                 return gameId;
             }
         }
@@ -426,13 +327,10 @@ class GameHandler {
         if (this.gameTimeouts.has(gameId)) {
             clearTimeout(this.gameTimeouts.get(gameId));
         }
-
-        // Set new timeout
         const timeoutId = setTimeout(() => {
             this.endGame(gameId);
             logger.info(`⏰ Game ${gameId} timed out`);
         }, timeout);
-
         this.gameTimeouts.set(gameId, timeoutId);
     }
 
@@ -442,7 +340,6 @@ class GameHandler {
             game.status = 'completed';
             this.activeGames.delete(gameId);
         }
-
         if (this.gameTimeouts.has(gameId)) {
             clearTimeout(this.gameTimeouts.get(gameId));
             this.gameTimeouts.delete(gameId);
