@@ -26,52 +26,29 @@ class AdminCommand {
         try {
             const panelText = `👑 *Admin Control Panel*\n\n` +
                 `Welcome, Administrator ${user.name || user.phoneNumber}!\n\n` +
-                `Choose an administrative function:`;
-
-            const sections = [
-                {
-                    title: "📊 Statistics & Monitoring",
-                    rows: [
-                        { title: "📈 Bot Statistics", description: "View detailed bot analytics", rowId: "admin_stats" },
-                        { title: "👥 User Analytics", description: "User activity and demographics", rowId: "admin_user_analytics" },
-                        { title: "🎮 Game Statistics", description: "Gaming activity and leaderboards", rowId: "admin_game_stats" },
-                        { title: "🤖 AI Usage Stats", description: "AI request analytics", rowId: "admin_ai_stats" }
-                    ]
-                },
-                {
-                    title: "👥 User Management",
-                    rows: [
-                        { title: "👤 All Users", description: "View and manage all users", rowId: "admin_users" },
-                        { title: "🚫 Banned Users", description: "Manage banned users", rowId: "admin_banned_users" },
-                        { title: "👑 Admin Users", description: "Manage administrators", rowId: "admin_admin_users" },
-                        { title: "🔍 Search User", description: "Find specific user", rowId: "admin_search_user" }
-                    ]
-                },
-                {
-                    title: "📢 Communication",
-                    rows: [
-                        { title: "📢 Broadcast Message", description: "Send message to all users", rowId: "admin_broadcast" },
-                        { title: "🎯 Targeted Message", description: "Send to specific groups", rowId: "admin_targeted_broadcast" },
-                        { title: "📋 Message History", description: "View broadcast history", rowId: "admin_broadcast_history" }
-                    ]
-                },
-                {
-                    title: "⚙️ Bot Management",
-                    rows: [
-                        { title: "⚙️ Bot Settings", description: "Configure bot settings", rowId: "admin_settings" },
-                        { title: "🔧 Maintenance", description: "Bot maintenance tools", rowId: "admin_maintenance" },
-                        { title: "📊 System Status", description: "Check system health", rowId: "admin_system_status" },
-                        { title: "🗄️ Database Tools", description: "Database management", rowId: "admin_database" }
-                    ]
-                }
-            ];
+                `Available Commands:\n\n` +
+                `📊 Statistics & Monitoring\n` +
+                `• /admin_stats - View detailed bot analytics\n` +
+                `• /admin_user_analytics - User activity and demographics\n` +
+                `• /admin_game_stats - Gaming activity and leaderboards\n` +
+                `• /admin_ai_stats - AI request analytics\n\n` +
+                `👥 User Management\n` +
+                `• /admin_users - View and manage all users\n` +
+                `• /admin_banned_users - Manage banned users\n` +
+                `• /admin_admin_users - Manage administrators\n` +
+                `• /admin_search_user - Find specific user\n\n` +
+                `📢 Communication\n` +
+                `• /admin_broadcast - Send message to all users\n` +
+                `• /admin_targeted_broadcast - Send to specific groups\n` +
+                `• /admin_broadcast_history - View broadcast history\n\n` +
+                `⚙️ Bot Management\n` +
+                `• /admin_settings - Configure bot settings\n` +
+                `• /admin_maintenance - Bot maintenance tools\n` +
+                `• /admin_system_status - Check system health\n` +
+                `• /admin_database - Database management`;
 
             await socket.sendMessage(message.key.remoteJid, {
-                text: panelText,
-                footer: "👑 Administrator Panel",
-                title: "Admin Control Panel",
-                buttonText: "📋 Select Function",
-                sections: sections
+                text: panelText
             });
 
         } catch (error) {
@@ -91,26 +68,22 @@ class AdminCommand {
             const WhatsAppBot = require('../bot');
             const aiService = require('../services/aiService');
             const gameHandler = require('../handlers/gameHandler');
-            
-            // Get bot instance for uptime
+
             const bot = new WhatsAppBot();
             const uptime = bot.getUptime();
-            
-            // Get various statistics
+
             const userStats = await userService.getUserStats();
             const gameStats = gameHandler.getGameStats();
-            
-            // Get database stats
+
             const { Message, AIRequest, FileProcessing } = require('../database/models');
-            
+
             const totalMessages = await Message.count();
             const totalAIRequests = await AIRequest.count();
             const totalFileProcessing = await FileProcessing.count();
-            
-            // Get today's stats
+
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            
+
             const todayMessages = await Message.count({
                 where: {
                     createdAt: {
@@ -118,7 +91,7 @@ class AdminCommand {
                     }
                 }
             });
-            
+
             const todayAIRequests = await AIRequest.count({
                 where: {
                     createdAt: {
@@ -128,32 +101,23 @@ class AdminCommand {
             });
 
             let statsText = `📊 *Bot Statistics*\n\n`;
-            
-            // System Stats
             statsText += `🤖 *System Status:*\n`;
             statsText += `• Uptime: ${formatUptime(uptime)}\n`;
             statsText += `• AI Service: ${aiService.isAvailable() ? '✅ Online' : '❌ Offline'}\n`;
             statsText += `• Active Games: ${gameStats.activeGames}\n\n`;
-            
-            // User Stats
             statsText += `👥 *User Statistics:*\n`;
             statsText += `• Total Users: ${userStats.total}\n`;
             statsText += `• Active Users (7d): ${userStats.active}\n`;
             statsText += `• Admin Users: ${userStats.admins}\n`;
             statsText += `• Banned Users: ${userStats.banned}\n\n`;
-            
-            // Message Stats
             statsText += `💬 *Message Statistics:*\n`;
             statsText += `• Total Messages: ${totalMessages}\n`;
             statsText += `• Today's Messages: ${todayMessages}\n`;
             statsText += `• AI Requests: ${totalAIRequests}\n`;
             statsText += `• Today's AI Requests: ${todayAIRequests}\n\n`;
-            
-            // File Processing Stats
             statsText += `📄 *File Processing:*\n`;
             statsText += `• Files Processed: ${totalFileProcessing}\n`;
-            
-            // Game Stats
+
             if (gameStats.activeGames > 0) {
                 statsText += `\n🎮 *Game Statistics:*\n`;
                 statsText += `• Active Games: ${gameStats.activeGames}\n`;
@@ -161,26 +125,7 @@ class AdminCommand {
             }
 
             await socket.sendMessage(message.key.remoteJid, {
-                text: statsText,
-                buttons: [
-                    {
-                        buttonId: 'admin_user_analytics',
-                        buttonText: { displayText: '👥 User Details' },
-                        type: 1
-                    },
-                    {
-                        buttonId: 'admin_refresh_stats',
-                        buttonText: { displayText: '🔄 Refresh' },
-                        type: 1
-                    },
-                    {
-                        buttonId: 'admin_panel',
-                        buttonText: { displayText: '🏠 Admin Panel' },
-                        type: 1
-                    }
-                ],
-                headerType: 1,
-                footer: '📊 Bot Analytics Dashboard'
+                text: statsText
             });
 
         } catch (error) {
@@ -201,7 +146,7 @@ class AdminCommand {
             }
 
             const users = await userService.getAllUsers({ limit: 10 });
-            
+
             if (users.length === 0) {
                 await socket.sendMessage(message.key.remoteJid, {
                     text: '📋 *User Management*\n\nNo users found in the database.'
@@ -209,42 +154,24 @@ class AdminCommand {
                 return;
             }
 
-            let userListText = `👥 *User Management*\n\n`;
-            userListText += `Recent users (showing ${users.length}):\n\n`;
+            let userListText = `👥 *User Management*\n\nRecent users (showing ${users.length}):\n\n`;
 
-            users.forEach((u, index) => {
+            users.forEach((u) => {
                 const status = u.isBanned ? '🚫' : u.isAdmin ? '👑' : '👤';
                 const lastSeen = new Date(u.lastSeen).toLocaleDateString();
-                userListText += `${status} *${u.name || 'Unknown'}*\n`;
-                userListText += `   📱 ${u.phoneNumber}\n`;
-                userListText += `   📅 Last seen: ${lastSeen}\n\n`;
+                userListText += `${status} *${u.name || 'Unknown'}*\n   📱 ${u.phoneNumber}\n   📅 Last seen: ${lastSeen}\n\n`;
             });
 
-            const sections = [
-                {
-                    title: "👤 User Actions",
-                    rows: [
-                        { title: "🔍 Search User", description: "Find user by phone number", rowId: "admin_search_user" },
-                        { title: "👑 Promote User", description: "Make user an admin", rowId: "admin_promote_user" },
-                        { title: "👤 Demote Admin", description: "Remove admin privileges", rowId: "admin_demote_user" }
-                    ]
-                },
-                {
-                    title: "🚫 Moderation",
-                    rows: [
-                        { title: "🚫 Ban User", description: "Ban user from bot", rowId: "admin_ban_user" },
-                        { title: "✅ Unban User", description: "Remove user ban", rowId: "admin_unban_user" },
-                        { title: "📋 Banned Users", description: "View all banned users", rowId: "admin_banned_users" }
-                    ]
-                }
-            ];
+            userListText += `\nAvailable Actions:\n` +
+                `• /admin_search_user\n` +
+                `• /admin_promote_user\n` +
+                `• /admin_demote_user\n` +
+                `• /admin_ban_user\n` +
+                `• /admin_unban_user\n` +
+                `• /admin_banned_users`;
 
             await socket.sendMessage(message.key.remoteJid, {
-                text: userListText,
-                footer: "👥 User Management Panel",
-                title: "User Management",
-                buttonText: "📋 Select Action",
-                sections: sections
+                text: userListText
             });
 
         } catch (error) {
@@ -272,29 +199,10 @@ class AdminCommand {
             }
 
             const broadcastMessage = args.join(' ');
-            
-            // Confirm broadcast
-            await socket.sendMessage(message.key.remoteJid, {
-                text: `📢 *Confirm Broadcast*\n\n*Message:*\n${broadcastMessage}\n\nThis will be sent to all users. Are you sure?`,
-                buttons: [
-                    {
-                        buttonId: 'confirm_broadcast_yes',
-                        buttonText: { displayText: '✅ Send Now' },
-                        type: 1
-                    },
-                    {
-                        buttonId: 'confirm_broadcast_no',
-                        buttonText: { displayText: '❌ Cancel' },
-                        type: 1
-                    }
-                ],
-                headerType: 1,
-                footer: 'Broadcast Confirmation'
-            });
 
-            // Store broadcast message for confirmation
-            // This would typically be handled by a session management system
-            // For now, we'll handle it in the button handler
+            await socket.sendMessage(message.key.remoteJid, {
+                text: `📢 *Confirm Broadcast*\n\n*Message:*\n${broadcastMessage}\n\nThis will be sent to all users.\n\nType /confirm_broadcast to send or /cancel_broadcast to cancel.`
+            });
 
         } catch (error) {
             logger.error('❌ Error handling broadcast:', error);
@@ -307,7 +215,7 @@ class AdminCommand {
     async executeBroadcast(socket, message, user, broadcastMessage) {
         try {
             const users = await userService.getAllUsers({ banned: false });
-            
+
             if (users.length === 0) {
                 await socket.sendMessage(message.key.remoteJid, {
                     text: '📢 No users found to broadcast to.'
@@ -326,35 +234,24 @@ class AdminCommand {
 
             for (const targetUser of users) {
                 try {
-                    // Don't send to the admin who sent the broadcast
                     if (targetUser.id === user.id) continue;
-
                     const targetJid = `${targetUser.phoneNumber}@s.whatsapp.net`;
                     await socket.sendMessage(targetJid, {
                         text: finalMessage
                     });
-                    
                     successCount++;
-                    
-                    // Small delay to avoid rate limiting
                     await new Promise(resolve => setTimeout(resolve, 100));
-                    
                 } catch (error) {
                     logger.error(`❌ Failed to send broadcast to ${targetUser.phoneNumber}:`, error);
                     failureCount++;
                 }
             }
 
-            const resultText = `📢 *Broadcast Complete*\n\n` +
-                `✅ Successfully sent: ${successCount}\n` +
-                `❌ Failed to send: ${failureCount}\n` +
-                `📊 Total users: ${users.length}`;
+            const resultText = `📢 *Broadcast Complete*\n\n✅ Successfully sent: ${successCount}\n❌ Failed to send: ${failureCount}\n📊 Total users: ${users.length}`;
 
             await socket.sendMessage(message.key.remoteJid, {
                 text: resultText
             });
-
-            logger.info(`📢 Broadcast completed by admin ${user.phoneNumber}: ${successCount} success, ${failureCount} failures`);
 
         } catch (error) {
             logger.error('❌ Error executing broadcast:', error);
@@ -384,7 +281,7 @@ class AdminCommand {
             const reason = args.slice(1).join(' ') || 'No reason provided';
 
             const targetUser = await userService.getUserByPhone(phoneNumber);
-            
+
             if (!targetUser) {
                 await socket.sendMessage(message.key.remoteJid, {
                     text: `❌ User with phone number ${phoneNumber} not found.`
@@ -407,16 +304,12 @@ class AdminCommand {
             }
 
             const success = await userService.banUser(targetUser.id, user.id, reason);
-            
-            if (success) {
-                await socket.sendMessage(message.key.remoteJid, {
-                    text: `✅ User ${targetUser.name || phoneNumber} has been banned.\n\n*Reason:* ${reason}`
-                });
-            } else {
-                await socket.sendMessage(message.key.remoteJid, {
-                    text: '❌ Failed to ban user. Please try again.'
-                });
-            }
+
+            await socket.sendMessage(message.key.remoteJid, {
+                text: success
+                    ? `✅ User ${targetUser.name || phoneNumber} has been banned.\n\n*Reason:* ${reason}`
+                    : '❌ Failed to ban user. Please try again.'
+            });
 
         } catch (error) {
             logger.error('❌ Error banning user:', error);
@@ -444,7 +337,7 @@ class AdminCommand {
 
             const phoneNumber = formatPhoneNumber(args[0]);
             const targetUser = await userService.getUserByPhone(phoneNumber);
-            
+
             if (!targetUser) {
                 await socket.sendMessage(message.key.remoteJid, {
                     text: `❌ User with phone number ${phoneNumber} not found.`
@@ -460,16 +353,12 @@ class AdminCommand {
             }
 
             const success = await userService.unbanUser(targetUser.id);
-            
-            if (success) {
-                await socket.sendMessage(message.key.remoteJid, {
-                    text: `✅ User ${targetUser.name || phoneNumber} has been unbanned.`
-                });
-            } else {
-                await socket.sendMessage(message.key.remoteJid, {
-                    text: '❌ Failed to unban user. Please try again.'
-                });
-            }
+
+            await socket.sendMessage(message.key.remoteJid, {
+                text: success
+                    ? `✅ User ${targetUser.name || phoneNumber} has been unbanned.`
+                    : '❌ Failed to unban user. Please try again.'
+            });
 
         } catch (error) {
             logger.error('❌ Error unbanning user:', error);
@@ -497,7 +386,7 @@ class AdminCommand {
 
             const phoneNumber = formatPhoneNumber(args[0]);
             const targetUser = await userService.getUserByPhone(phoneNumber);
-            
+
             if (!targetUser) {
                 await socket.sendMessage(message.key.remoteJid, {
                     text: `❌ User with phone number ${phoneNumber} not found.`
@@ -513,16 +402,12 @@ class AdminCommand {
             }
 
             const success = await userService.promoteToAdmin(targetUser.id);
-            
-            if (success) {
-                await socket.sendMessage(message.key.remoteJid, {
-                    text: `✅ User ${targetUser.name || phoneNumber} has been promoted to admin.`
-                });
-            } else {
-                await socket.sendMessage(message.key.remoteJid, {
-                    text: '❌ Failed to promote user. Please try again.'
-                });
-            }
+
+            await socket.sendMessage(message.key.remoteJid, {
+                text: success
+                    ? `✅ User ${targetUser.name || phoneNumber} has been promoted to admin.`
+                    : '❌ Failed to promote user. Please try again.'
+            });
 
         } catch (error) {
             logger.error('❌ Error promoting user:', error);
@@ -550,7 +435,7 @@ class AdminCommand {
 
             const phoneNumber = formatPhoneNumber(args[0]);
             const targetUser = await userService.getUserByPhone(phoneNumber);
-            
+
             if (!targetUser) {
                 await socket.sendMessage(message.key.remoteJid, {
                     text: `❌ User with phone number ${phoneNumber} not found.`
@@ -566,16 +451,12 @@ class AdminCommand {
             }
 
             const success = await userService.demoteFromAdmin(targetUser.id);
-            
-            if (success) {
-                await socket.sendMessage(message.key.remoteJid, {
-                    text: `✅ User ${targetUser.name || phoneNumber} has been demoted from admin.`
-                });
-            } else {
-                await socket.sendMessage(message.key.remoteJid, {
-                    text: '❌ Failed to demote user. Please try again.'
-                });
-            }
+
+            await socket.sendMessage(message.key.remoteJid, {
+                text: success
+                    ? `✅ User ${targetUser.name || phoneNumber} has been demoted from admin.`
+                    : '❌ Failed to demote user. Please try again.'
+            });
 
         } catch (error) {
             logger.error('❌ Error demoting user:', error);
@@ -595,7 +476,7 @@ class AdminCommand {
             }
 
             const config = require('../config/config');
-            
+
             const settingsText = `⚙️ *Bot Settings*\n\n` +
                 `📱 *Bot Configuration:*\n` +
                 `• Name: ${config.BOT_NAME}\n` +
@@ -607,34 +488,15 @@ class AdminCommand {
                 `• Analysis Model: ${config.AI_ANALYSIS_MODEL}\n` +
                 `• AI Available: ${require('../services/aiService').isAvailable() ? '✅' : '❌'}\n\n` +
                 `🎮 *Game Settings:*\n` +
-                `• RPS Timeout: ${config.ROCK_PAPER_SCISSORS_TIMEOUT/1000}s\n` +
-                `• Quiz Timeout: ${config.QUIZ_TIMEOUT/1000}s\n\n` +
+                `• RPS Timeout: ${config.ROCK_PAPER_SCISSORS_TIMEOUT / 1000}s\n` +
+                `• Quiz Timeout: ${config.QUIZ_TIMEOUT / 1000}s\n\n` +
                 `📄 *File Support:*\n` +
                 `• Document Types: ${config.SUPPORTED_FILE_TYPES.length}\n` +
                 `• Image Types: ${config.SUPPORTED_IMAGE_TYPES.length}\n\n` +
                 `⚠️ Settings are configured via environment variables.`;
 
             await socket.sendMessage(message.key.remoteJid, {
-                text: settingsText,
-                buttons: [
-                    {
-                        buttonId: 'admin_system_status',
-                        buttonText: { displayText: '📊 System Status' },
-                        type: 1
-                    },
-                    {
-                        buttonId: 'admin_stats',
-                        buttonText: { displayText: '📈 Bot Stats' },
-                        type: 1
-                    },
-                    {
-                        buttonId: 'admin_panel',
-                        buttonText: { displayText: '🏠 Admin Panel' },
-                        type: 1
-                    }
-                ],
-                headerType: 1,
-                footer: '⚙️ Configuration Panel'
+                text: settingsText
             });
 
         } catch (error) {
