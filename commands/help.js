@@ -1,14 +1,13 @@
 const config = require('../config/config');
 const logger = require('../utils/logger');
+const commandHandler = require('./index');
 
 class HelpCommand {
     async handle(socket, message, user, args) {
         try {
             if (args.length > 0) {
-                // Show help for specific command
                 await this.showCommandHelp(socket, message, user, args[0]);
             } else {
-                // Show general help menu
                 await this.showHelpMenu(socket, message, user);
             }
         } catch (error) {
@@ -21,31 +20,18 @@ class HelpCommand {
 
     async showHelpMenu(socket, message, user) {
         try {
-            const helpText = `📚 *Help Center*\n\n` +
-                `Welcome to the ${config.BOT_NAME} help center!\n\n` +
-                `Choose a category to learn more:`;
+            const helpTextHeader = `📚 *Help Center*\n\nWelcome to *${config.BOT_NAME}*! Here's a list of available commands:\n\n`;
+            let helpText = '';
 
-            const buttons = [
-                { id: 'help_commands', text: '📋 All Commands' },
-                { id: 'help_ai', text: '🤖 AI Features' },
-                { id: 'help_games', text: '🎮 Games' }
-            ];
-
-            if (user.isAdmin) {
-                buttons.push({ id: 'help_admin', text: '👑 Admin Help' });
+            for (const [cmd, info] of Object.entries(commandHandler.getCommandInfo('') || {})) {
+                if (!info.description) continue;
+                if (info.adminOnly && !user.isAdmin) continue;
+                helpText += `• /${cmd} — ${info.description}\n`;
             }
 
-            await socket.sendMessage(message.key.remoteJid, {
-                text: helpText,
-                buttons: buttons.map((btn, index) => ({
-                    buttonId: btn.id,
-                    buttonText: { displayText: btn.text },
-                    type: 1
-                })),
-                headerType: 1,
-                footer: '📚 Choose a help category'
-            });
+            helpText += `\n💡 Tip: Use /help <command> to see usage.`;
 
+            await socket.sendMessage(message.key.remoteJid, { text: helpTextHeader + helpText });
         } catch (error) {
             logger.error('❌ Error showing help menu:', error);
         }
@@ -53,93 +39,20 @@ class HelpCommand {
 
     async showCommandHelp(socket, message, user, specificCommand = null) {
         try {
-            const commandHandler = require('./index');
-            
-            let helpText = `📋 *Available Commands*\n\n`;
-            
-            if (specificCommand) {
-                const commandInfo = commandHandler.getCommandInfo(specificCommand);
-                if (commandInfo) {
-                    helpText = `📋 *Command: /${specificCommand}*\n\n`;
-                    helpText += `📝 *Description:* ${commandInfo.description}\n`;
-                    helpText += `💡 *Usage:* ${commandInfo.usage}\n\n`;
-                    helpText += `Need more help? Try /help for all commands.`;
-                } else {
-                    helpText = `❓ Command "/${specificCommand}" not found.\n\nUse /help to see all available commands.`;
-                }
+            const commandInfo = commandHandler.getCommandInfo(specificCommand);
+
+            if (commandInfo) {
+                let helpText = `📋 *Command: /${specificCommand}*\n\n`;
+                helpText += `📝 *Description:* ${commandInfo.description}\n`;
+                helpText += `💡 *Usage:* ${commandInfo.usage}\n`;
+                helpText += `\nNeed more help? Use /help to see all commands.`;
+
+                await socket.sendMessage(message.key.remoteJid, { text: helpText });
             } else {
-                const basicCommands = [
-                    { cmd: 'start', desc: 'Start the bot and show welcome message' },
-                    { cmd: 'help', desc: 'Show this help message' },
-                    { cmd: 'menu', desc: 'Show main menu with options' },
-                    { cmd: 'about', desc: 'About this bot' },
-                    { cmd: 'status', desc: 'Check bot status' }
-                ];
-
-                const aiCommands = [
-                    { cmd: 'ai <message>', desc: 'Chat with AI assistant' },
-                    { cmd: 'chat <message>', desc: 'Start AI conversation' },
-                    { cmd: 'ask <question>', desc: 'Ask AI a question' }
-                ];
-
-                const gameCommands = [
-                    { cmd: 'games', desc: 'Show available games' },
-                    { cmd: 'rps', desc: 'Play Rock Paper Scissors' },
-                    { cmd: 'quiz [topic]', desc: 'Start quiz game' },
-                    { cmd: 'gamestats', desc: 'Show your game statistics' }
-                ];
-
-                helpText += `🔧 *Basic Commands:*\n`;
-                basicCommands.forEach(c => helpText += `• /${c.cmd} - ${c.desc}\n`);
-
-                helpText += `\n🤖 *AI Commands:*\n`;
-                aiCommands.forEach(c => helpText += `• /${c.cmd} - ${c.desc}\n`);
-
-                helpText += `\n🎮 *Game Commands:*\n`;
-                gameCommands.forEach(c => helpText += `• /${c.cmd} - ${c.desc}\n`);
-
-                if (user.isAdmin) {
-                    const adminCommands = [
-                        { cmd: 'admin', desc: 'Open admin panel' },
-                        { cmd: 'stats', desc: 'Show bot statistics' },
-                        { cmd: 'users', desc: 'Manage users' },
-                        { cmd: 'broadcast', desc: 'Send message to all users' }
-                    ];
-
-                    helpText += `\n👑 *Admin Commands:*\n`;
-                    adminCommands.forEach(c => helpText += `• /${c.cmd} - ${c.desc}\n`);
-                }
-
-                helpText += `\n💡 *Tips:*\n`;
-                helpText += `• Send any text to chat with AI\n`;
-                helpText += `• Send images/documents for analysis\n`;
-                helpText += `• Use buttons for easier interaction\n`;
-                helpText += `• Type /${config.BOT_PREFIX}help <command> for detailed help`;
+                await socket.sendMessage(message.key.remoteJid, {
+                    text: `❓ Command "/${specificCommand}" not found.\n\nUse /help to see all available commands.`
+                });
             }
-
-            await socket.sendMessage(message.key.remoteJid, {
-                text: helpText,
-                buttons: [
-                    {
-                        buttonId: 'help_ai',
-                        buttonText: { displayText: '🤖 AI Help' },
-                        type: 1
-                    },
-                    {
-                        buttonId: 'help_games',
-                        buttonText: { displayText: '🎮 Game Help' },
-                        type: 1
-                    },
-                    {
-                        buttonId: 'main_menu',
-                        buttonText: { displayText: '🏠 Main Menu' },
-                        type: 1
-                    }
-                ],
-                headerType: 1,
-                footer: '📚 Command Reference'
-            });
-
         } catch (error) {
             logger.error('❌ Error showing command help:', error);
         }
@@ -177,24 +90,7 @@ class HelpCommand {
                 `• Use follow-up questions\n` +
                 `• Try different file formats`;
 
-            await socket.sendMessage(message.key.remoteJid, {
-                text: aiHelpText,
-                buttons: [
-                    {
-                        buttonId: 'ai_demo',
-                        buttonText: { displayText: '🤖 Try AI Chat' },
-                        type: 1
-                    },
-                    {
-                        buttonId: 'help_commands',
-                        buttonText: { displayText: '📋 All Commands' },
-                        type: 1
-                    }
-                ],
-                headerType: 1,
-                footer: '🤖 AI Assistant Guide'
-            });
-
+            await socket.sendMessage(message.key.remoteJid, { text: aiHelpText });
         } catch (error) {
             logger.error('❌ Error showing AI help:', error);
         }
@@ -207,11 +103,9 @@ class HelpCommand {
                 `🪨 *Rock Paper Scissors:*\n` +
                 `• Classic game vs bot\n` +
                 `• Best of 3 rounds\n` +
-                `• Use buttons to choose\n` +
                 `• Command: /rps\n\n` +
                 `🧠 *Quiz & Trivia:*\n` +
                 `• AI-generated questions\n` +
-                `• Various topics available\n` +
                 `• Multiple choice format\n` +
                 `• Command: /quiz [topic]\n\n` +
                 `🏆 *Scoring System:*\n` +
@@ -230,29 +124,7 @@ class HelpCommand {
                 `• Check leaderboards\n` +
                 `• Challenge yourself!`;
 
-            await socket.sendMessage(message.key.remoteJid, {
-                text: gameHelpText,
-                buttons: [
-                    {
-                        buttonId: 'rps_play_again',
-                        buttonText: { displayText: '🪨 Play RPS' },
-                        type: 1
-                    },
-                    {
-                        buttonId: 'quiz_next',
-                        buttonText: { displayText: '🧠 Start Quiz' },
-                        type: 1
-                    },
-                    {
-                        buttonId: 'gamestats_show',
-                        buttonText: { displayText: '📊 My Stats' },
-                        type: 1
-                    }
-                ],
-                headerType: 1,
-                footer: '🎮 Gaming Guide'
-            });
-
+            await socket.sendMessage(message.key.remoteJid, { text: gameHelpText });
         } catch (error) {
             logger.error('❌ Error showing game help:', error);
         }
@@ -301,29 +173,7 @@ class HelpCommand {
                 `• Audit admin actions\n` +
                 `• Emergency controls`;
 
-            await socket.sendMessage(message.key.remoteJid, {
-                text: adminHelpText,
-                buttons: [
-                    {
-                        buttonId: 'admin_stats',
-                        buttonText: { displayText: '📊 Bot Stats' },
-                        type: 1
-                    },
-                    {
-                        buttonId: 'admin_users',
-                        buttonText: { displayText: '👥 User Management' },
-                        type: 1
-                    },
-                    {
-                        buttonId: 'admin_settings',
-                        buttonText: { displayText: '⚙️ Settings' },
-                        type: 1
-                    }
-                ],
-                headerType: 1,
-                footer: '👑 Administrator Guide'
-            });
-
+            await socket.sendMessage(message.key.remoteJid, { text: adminHelpText });
         } catch (error) {
             logger.error('❌ Error showing admin help:', error);
         }
